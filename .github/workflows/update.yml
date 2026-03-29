@@ -63,6 +63,9 @@ jobs:
             > .github/workflows/build-and-tag.yml
           git add -A
           git commit -a -m "Add workflow"
+
+          sed -i -e 's@module github.com/prometheus/prometheus@module github.com/litetex-oss/prometheus-slim@g' go.mod
+          git commit -a -m "Change module"
           
           git remote add slim https://litetex-oss-bot:${{ secrets.PUSH_PAT }}@github.com/litetex-oss/prometheus-slim.git
           git push --set-upstream slim -u release-$tag
