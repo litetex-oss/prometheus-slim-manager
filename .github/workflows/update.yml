@@ -40,5 +40,12 @@ jobs:
           
           cd prometheus
           git switch -c release-$tag
+
+          rm -rf .github
+          git commit -m "Deleted .github folder"
+
+          rm -f plugins/plugin_*
+          git commit -m "Deleted all plugins"
+          
           git remote add slim https://litetex-oss-bot:${{ secrets.PUSH_PAT }}@github.com/litetex-oss/prometheus-slim.git
           git push --set-upstream slim -u release-$tag
