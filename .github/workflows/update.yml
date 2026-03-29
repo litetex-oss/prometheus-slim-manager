@@ -12,7 +12,11 @@ jobs:
     steps:
       - run: |
           if [[ -z "${{ inputs.tag }}" ]]; then
-            tag=$(curl -s https://api.github.com/repos/prometheus/prometheus/releases/latest | jq -r '.tag_name')
+            tag=$(curl -s -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              -H "X-GitHub-Api-Version: 2026-03-10" \
+              https://api.github.com/repos/prometheus/prometheus/releases/latest \
+              | jq -r '.tag_name')
           else
             tag="${{ inputs.tag }}"
           fi
