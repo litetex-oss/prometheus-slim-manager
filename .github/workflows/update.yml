@@ -32,6 +32,6 @@ jobs:
           git clone --branch "$tag" https://github.com/prometheus/prometheus.git
           
           cd prometheus
-          git branch -m release-$tag
-          git remote set-url origin https://github.com/litetex-oss/prometheus-slim.git
-          git push origin -u release-$tag
+          git switch -c release-$tag
+          git remote add slim https://github.com/litetex-oss/prometheus-slim.git
+          git push --set-upstream slim -u release-$tag
