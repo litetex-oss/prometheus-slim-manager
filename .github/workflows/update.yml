@@ -24,9 +24,14 @@ jobs:
           if curl --fail -s -H "Accept: application/vnd.github+json" \
               -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
               -H "X-GitHub-Api-Version: 2026-03-10" \
-              https://api.github.com/repos/litetex-oss/prometheus-slim/branches/release-$tag; then
+              https://api.github.com/repos/litetex-oss/prometheus-slim/branches/release-$tag > /dev/null; then
             echo "Branch already exists; Aborting"
             exit 0
           fi
 
-          git clone https://github.com/prometheus/prometheus.git --branch "$tag"
+          git clone --branch "$tag" https://github.com/prometheus/prometheus.git
+          
+          cd prometheus
+          git branch -m release-$tag
+          git remote set-url origin https://github.com/litetex-oss/prometheus-slim.git
+          git push origin -u release-$tag
