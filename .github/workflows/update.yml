@@ -20,4 +20,13 @@ jobs:
           else
             tag="${{ inputs.tag }}"
           fi
-          echo $tag
+
+          if curl --fail -s -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              -H "X-GitHub-Api-Version: 2026-03-10" \
+              https://api.github.com/repos/litetex-oss/prometheus-slim/branches/release-$tag; then
+            echo "Branch already exists; Aborting"
+            exit 0
+          fi
+
+          git clone https://github.com/prometheus/prometheus.git --branch "$tag"
