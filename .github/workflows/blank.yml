@@ -1,0 +1,19 @@
+name: Update repo
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        type: string
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          if [[ -z "${{ inputs.tag }}" ]]; then
+            tag=$(curl -s https://api.github.com/repos/prometheus/prometheus/releases/latest | jq -r '.tag_name')
+          else
+            tag="${{ inputs.tag }}"
+          fi
+          echo $tag
