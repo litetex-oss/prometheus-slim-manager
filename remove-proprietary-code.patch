@@ -1,0 +1,166 @@
+diff --git a/config/config.go b/config/config.go
+index d721d7fb8..8839a6e71 100644
+--- a/config/config.go
++++ b/config/config.go
+@@ -33,14 +33,11 @@ import (
+ 	"github.com/prometheus/common/config"
+ 	"github.com/prometheus/common/model"
+ 	"github.com/prometheus/otlptranslator"
+-	"github.com/prometheus/sigv4"
+ 	"go.yaml.in/yaml/v2"
+ 
+ 	"github.com/prometheus/prometheus/discovery"
+ 	"github.com/prometheus/prometheus/model/labels"
+ 	"github.com/prometheus/prometheus/model/relabel"
+-	"github.com/prometheus/prometheus/storage/remote/azuread"
+-	"github.com/prometheus/prometheus/storage/remote/googleiam"
+ )
+ 
+ var (
+@@ -1300,7 +1297,6 @@ type AlertmanagerConfig struct {
+ 
+ 	ServiceDiscoveryConfigs discovery.Configs       `yaml:"-"`
+ 	HTTPClientConfig        config.HTTPClientConfig `yaml:",inline"`
+-	SigV4Config             *sigv4.SigV4Config      `yaml:"sigv4,omitempty"`
+ 
+ 	// The URL scheme to use when talking to Alertmanagers.
+ 	Scheme string `yaml:"scheme,omitempty"`
+@@ -1338,13 +1334,6 @@ func (c *AlertmanagerConfig) UnmarshalYAML(unmarshal func(any) error) error {
+ 		return err
+ 	}
+ 
+-	httpClientConfigAuthEnabled := c.HTTPClientConfig.BasicAuth != nil ||
+-		c.HTTPClientConfig.Authorization != nil || c.HTTPClientConfig.OAuth2 != nil
+-
+-	if httpClientConfigAuthEnabled && c.SigV4Config != nil {
+-		return errors.New("at most one of basic_auth, authorization, oauth2, & sigv4 must be configured")
+-	}
+-
+ 	// Check for users putting URLs in target groups.
+ 	if len(c.RelabelConfigs) == 0 {
+ 		if err := checkStaticTargets(c.ServiceDiscoveryConfigs); err != nil {
+@@ -1431,9 +1420,6 @@ type RemoteWriteConfig struct {
+ 	HTTPClientConfig config.HTTPClientConfig `yaml:",inline"`
+ 	QueueConfig      QueueConfig             `yaml:"queue_config,omitempty"`
+ 	MetadataConfig   MetadataConfig          `yaml:"metadata_config,omitempty"`
+-	SigV4Config      *sigv4.SigV4Config      `yaml:"sigv4,omitempty"`
+-	AzureADConfig    *azuread.AzureADConfig  `yaml:"azuread,omitempty"`
+-	GoogleIAMConfig  *googleiam.Config       `yaml:"google_iam,omitempty"`
+ }
+ 
+ // SetDirectory joins any relative file paths with dir.
+@@ -1496,15 +1482,6 @@ func validateAuthConfigs(c *RemoteWriteConfig) error {
+ 	if c.HTTPClientConfig.OAuth2 != nil {
+ 		authConfigured = append(authConfigured, "oauth2")
+ 	}
+-	if c.SigV4Config != nil {
+-		authConfigured = append(authConfigured, "sigv4")
+-	}
+-	if c.AzureADConfig != nil {
+-		authConfigured = append(authConfigured, "azuread")
+-	}
+-	if c.GoogleIAMConfig != nil {
+-		authConfigured = append(authConfigured, "google_iam")
+-	}
+ 	if len(authConfigured) > 1 {
+ 		return fmt.Errorf("at most one of basic_auth, authorization, oauth2, sigv4, azuread or google_iam must be configured. Currently configured: %v", authConfigured)
+ 	}
+diff --git a/notifier/alertmanagerset.go b/notifier/alertmanagerset.go
+index 81565b5cf..9cd49a066 100644
+--- a/notifier/alertmanagerset.go
++++ b/notifier/alertmanagerset.go
+@@ -22,7 +22,6 @@ import (
+ 	"sync"
+ 
+ 	config_util "github.com/prometheus/common/config"
+-	"github.com/prometheus/sigv4"
+ 	"go.yaml.in/yaml/v2"
+ 
+ 	"github.com/prometheus/prometheus/config"
+@@ -54,13 +53,6 @@ func newAlertmanagerSet(cfg *config.AlertmanagerConfig, opts *Options, logger *s
+ 	}
+ 	t := client.Transport
+ 
+-	if cfg.SigV4Config != nil {
+-		t, err = sigv4.NewSigV4RoundTripper(cfg.SigV4Config, client.Transport)
+-		if err != nil {
+-			return nil, err
+-		}
+-	}
+-
+ 	client.Transport = t
+ 
+ 	s := &alertmanagerSet{
+diff --git a/storage/remote/client.go b/storage/remote/client.go
+index 78405b378..d3653f8c8 100644
+--- a/storage/remote/client.go
++++ b/storage/remote/client.go
+@@ -33,7 +33,6 @@ import (
+ 	config_util "github.com/prometheus/common/config"
+ 	"github.com/prometheus/common/model"
+ 	"github.com/prometheus/common/version"
+-	"github.com/prometheus/sigv4"
+ 	"go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace"
+ 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+ 	"go.opentelemetry.io/otel"
+@@ -41,8 +40,6 @@ import (
+ 
+ 	"github.com/prometheus/prometheus/prompb"
+ 	"github.com/prometheus/prometheus/storage"
+-	"github.com/prometheus/prometheus/storage/remote/azuread"
+-	"github.com/prometheus/prometheus/storage/remote/googleiam"
+ )
+ 
+ const (
+@@ -129,9 +126,6 @@ type ClientConfig struct {
+ 	URL                   *config_util.URL
+ 	Timeout               model.Duration
+ 	HTTPClientConfig      config_util.HTTPClientConfig
+-	SigV4Config           *sigv4.SigV4Config
+-	AzureADConfig         *azuread.AzureADConfig
+-	GoogleIAMConfig       *googleiam.Config
+ 	Headers               map[string]string
+ 	RetryOnRateLimit      bool
+ 	WriteProtoMsg         remoteapi.WriteMessageType
+@@ -195,27 +189,6 @@ func NewWriteClient(name string, conf *ClientConfig) (WriteClient, error) {
+ 		t = newInjectHeadersRoundTripper(conf.Headers, t)
+ 	}
+ 
+-	if conf.SigV4Config != nil {
+-		t, err = sigv4.NewSigV4RoundTripper(conf.SigV4Config, t)
+-		if err != nil {
+-			return nil, err
+-		}
+-	}
+-
+-	if conf.AzureADConfig != nil {
+-		t, err = azuread.NewAzureADRoundTripper(conf.AzureADConfig, t)
+-		if err != nil {
+-			return nil, err
+-		}
+-	}
+-
+-	if conf.GoogleIAMConfig != nil {
+-		t, err = googleiam.NewRoundTripper(conf.GoogleIAMConfig, t)
+-		if err != nil {
+-			return nil, err
+-		}
+-	}
+-
+ 	writeProtoMsg := remoteapi.WriteV1MessageType
+ 	if conf.WriteProtoMsg != "" {
+ 		writeProtoMsg = conf.WriteProtoMsg
+diff --git a/storage/remote/write.go b/storage/remote/write.go
+index 6a336dc06..f9382ce08 100644
+--- a/storage/remote/write.go
++++ b/storage/remote/write.go
+@@ -171,9 +171,6 @@ func (rws *WriteStorage) ApplyConfig(conf *config.Config) error {
+ 			WriteProtoMsg:    rwConf.ProtobufMessage,
+ 			Timeout:          rwConf.RemoteTimeout,
+ 			HTTPClientConfig: rwConf.HTTPClientConfig,
+-			SigV4Config:      rwConf.SigV4Config,
+-			AzureADConfig:    rwConf.AzureADConfig,
+-			GoogleIAMConfig:  rwConf.GoogleIAMConfig,
+ 			Headers:          rwConf.Headers,
+ 			RetryOnRateLimit: rwConf.QueueConfig.RetryOnRateLimit,
+ 			RoundRobinDNS:    rwConf.RoundRobinDNS,
