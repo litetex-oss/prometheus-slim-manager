@@ -46,6 +46,11 @@ jobs:
 
           rm -f plugins/plugin_*
           git commit -a -m "Deleted all plugins"
+
+          rm -rf storage/remote/azuread
+          git commit -a -m "Remove AzureAD remote storage code"
+          rm -rf storage/remote/googleiam
+          git commit -a -m "Remove GoogleIAM remote storage code"
           
           git remote add slim https://litetex-oss-bot:${{ secrets.PUSH_PAT }}@github.com/litetex-oss/prometheus-slim.git
           git push --set-upstream slim -u release-$tag
