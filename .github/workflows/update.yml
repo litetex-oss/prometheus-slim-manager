@@ -11,7 +11,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - run: |
+      - uses: actions/checkout@v6
+      
+      - name: Update
+        run: |
           if [[ -z "${{ inputs.tag }}" ]]; then
             tag=$(curl -s -H "Accept: application/vnd.github+json" \
               -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
@@ -31,8 +34,11 @@ jobs:
           fi
 
           git clone --branch "$tag" https://github.com/prometheus/prometheus.git
+
+          git config --global user.email "164098849+litetex-oss-bot@users.noreply.github.com"
+          git config --global user.name "litetex-oss-bot"
           
           cd prometheus
           git switch -c release-$tag
-          git remote add slim https://github.com/litetex-oss/prometheus-slim.git
+          git remote add slim https://litetex-oss-bot:${{ secrets.GITHUB_PUSH_PAT }}@github.com/litetex-oss/prometheus-slim.git
           git push --set-upstream slim -u release-$tag
