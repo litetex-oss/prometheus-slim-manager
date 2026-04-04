@@ -58,6 +58,9 @@ jobs:
           rm -f discovery/metrics_k8s_client.go
           git commit -a -m "Delete metrics_k8s_client.go"
 
+          rm -f util/logging/dedupe_test.go
+          git commit -a -m "Delete dedupe_test.go"
+
           git apply ../remove-k8s-integration.patch
           git commit -a -m "Removed k8s integration"
 
