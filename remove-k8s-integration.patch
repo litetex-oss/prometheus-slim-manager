@@ -1,24 +1,26 @@
 diff --git a/cmd/prometheus/main.go b/cmd/prometheus/main.go
-index c5ff33965..d82a879ae 100644
+index 864799cf5..88283db40 100644
 --- a/cmd/prometheus/main.go
 +++ b/cmd/prometheus/main.go
-@@ -55,8 +55,6 @@ import (
+@@ -55,9 +55,6 @@ import (
  	toolkit_web "github.com/prometheus/exporter-toolkit/web"
  	"go.uber.org/atomic"
  	"go.uber.org/automaxprocs/maxprocs"
+-	"k8s.io/client-go/rest"
 -	"k8s.io/klog"
 -	klogv2 "k8s.io/klog/v2"
  
  	"github.com/prometheus/prometheus/config"
  	"github.com/prometheus/prometheus/discovery"
-@@ -105,23 +103,9 @@ type klogv1Writer struct{}
+@@ -106,24 +103,6 @@ type klogv1Writer struct{}
+ // by klog's upstream klogv1/v2 coexistence example:
  // https://github.com/kubernetes/klog/blob/main/examples/coexist_klog_v1_and_v2/coexist_klog_v1_and_v2.go
  func (klogv1Writer) Write(p []byte) (n int, err error) {
- 	if len(p) < klogv1DefaultPrefixLength {
+-	if len(p) < klogv1DefaultPrefixLength {
 -		klogv2.InfoDepth(klogv1OutputCallDepth, string(p))
- 		return len(p), nil
- 	}
- 
+-		return len(p), nil
+-	}
+-
 -	switch p[0] {
 -	case 'I':
 -		klogv2.InfoDepth(klogv1OutputCallDepth, string(p[klogv1DefaultPrefixLength:]))
@@ -35,17 +37,20 @@ index c5ff33965..d82a879ae 100644
  	return len(p), nil
  }
  
-@@ -809,9 +793,6 @@ func main() {
+@@ -835,12 +814,6 @@ func main() {
  	noStepSubqueryInterval := &safePromQLNoStepSubqueryInterval{}
  	noStepSubqueryInterval.Set(config.DefaultGlobalConfig.EvaluationInterval)
  
 -	klogv2.SetSlogLogger(logger.With("component", "k8s_client_runtime"))
 -	klog.SetOutputBySeverity("INFO", klogv1Writer{})
+-	// Avoid duplicate API deprecation warnings (e.g., "v1 Endpoints is deprecated in v1.33+...")
+-	// that can pollute the logs.
+-	rest.SetDefaultWarningHandlerWithContext(logging.NewDedupDeprecationWarningLogger())
 -
  	modeAppName := "Prometheus Server"
  	mode := "server"
  	if agentMode {
-@@ -856,17 +837,6 @@ func main() {
+@@ -885,17 +858,6 @@ func main() {
  		discoveryManagerNotify  *discovery.Manager
  	)
  
@@ -64,7 +69,7 @@ index c5ff33965..d82a879ae 100644
  	if err != nil {
  		logger.Error("failed to register service discovery metrics", "err", err)
 diff --git a/cmd/promtool/main.go b/cmd/promtool/main.go
-index 17035bb3b..136870385 100644
+index 6555ccc6f..b22e5bfcb 100644
 --- a/cmd/promtool/main.go
 +++ b/cmd/promtool/main.go
 @@ -48,7 +48,6 @@ import (
@@ -75,7 +80,7 @@ index 17035bb3b..136870385 100644
  	"github.com/prometheus/prometheus/discovery/targetgroup"
  	"github.com/prometheus/prometheus/model/labels"
  	"github.com/prometheus/prometheus/model/rulefmt"
-@@ -707,10 +706,6 @@ func checkConfig(agentMode bool, filename string, checkSyntaxOnly bool) ([]strin
+@@ -712,10 +711,6 @@ func checkConfig(agentMode bool, filename string, checkSyntaxOnly bool) ([]strin
  
  		for _, c := range scfg.ServiceDiscoveryConfigs {
  			switch c := c.(type) {
