@@ -1,10 +1,10 @@
 diff --git a/config/config.go b/config/config.go
-index d721d7fb8..8839a6e71 100644
+index 6dcdcf05a..aa5f84b17 100644
 --- a/config/config.go
 +++ b/config/config.go
-@@ -33,14 +33,11 @@ import (
- 	"github.com/prometheus/common/config"
+@@ -34,14 +34,11 @@ import (
  	"github.com/prometheus/common/model"
+ 	"github.com/prometheus/common/promslog"
  	"github.com/prometheus/otlptranslator"
 -	"github.com/prometheus/sigv4"
  	"go.yaml.in/yaml/v2"
@@ -17,7 +17,7 @@ index d721d7fb8..8839a6e71 100644
  )
  
  var (
-@@ -1300,7 +1297,6 @@ type AlertmanagerConfig struct {
+@@ -1385,7 +1382,6 @@ type AlertmanagerConfig struct {
  
  	ServiceDiscoveryConfigs discovery.Configs       `yaml:"-"`
  	HTTPClientConfig        config.HTTPClientConfig `yaml:",inline"`
@@ -25,7 +25,7 @@ index d721d7fb8..8839a6e71 100644
  
  	// The URL scheme to use when talking to Alertmanagers.
  	Scheme string `yaml:"scheme,omitempty"`
-@@ -1338,13 +1334,6 @@ func (c *AlertmanagerConfig) UnmarshalYAML(unmarshal func(any) error) error {
+@@ -1423,13 +1419,6 @@ func (c *AlertmanagerConfig) UnmarshalYAML(unmarshal func(any) error) error {
  		return err
  	}
  
@@ -39,7 +39,7 @@ index d721d7fb8..8839a6e71 100644
  	// Check for users putting URLs in target groups.
  	if len(c.RelabelConfigs) == 0 {
  		if err := checkStaticTargets(c.ServiceDiscoveryConfigs); err != nil {
-@@ -1431,9 +1420,6 @@ type RemoteWriteConfig struct {
+@@ -1518,9 +1507,6 @@ type RemoteWriteConfig struct {
  	HTTPClientConfig config.HTTPClientConfig `yaml:",inline"`
  	QueueConfig      QueueConfig             `yaml:"queue_config,omitempty"`
  	MetadataConfig   MetadataConfig          `yaml:"metadata_config,omitempty"`
@@ -49,7 +49,7 @@ index d721d7fb8..8839a6e71 100644
  }
  
  // SetDirectory joins any relative file paths with dir.
-@@ -1496,15 +1482,6 @@ func validateAuthConfigs(c *RemoteWriteConfig) error {
+@@ -1587,15 +1573,6 @@ func validateAuthConfigs(c *RemoteWriteConfig) error {
  	if c.HTTPClientConfig.OAuth2 != nil {
  		authConfigured = append(authConfigured, "oauth2")
  	}
@@ -92,7 +92,7 @@ index 81565b5cf..9cd49a066 100644
  
  	s := &alertmanagerSet{
 diff --git a/storage/remote/client.go b/storage/remote/client.go
-index 78405b378..d3653f8c8 100644
+index 8deb80667..dccb95773 100644
 --- a/storage/remote/client.go
 +++ b/storage/remote/client.go
 @@ -33,7 +33,6 @@ import (
@@ -151,10 +151,10 @@ index 78405b378..d3653f8c8 100644
  	if conf.WriteProtoMsg != "" {
  		writeProtoMsg = conf.WriteProtoMsg
 diff --git a/storage/remote/write.go b/storage/remote/write.go
-index 6a336dc06..f9382ce08 100644
+index 075b7740d..e4ee3c5e5 100644
 --- a/storage/remote/write.go
 +++ b/storage/remote/write.go
-@@ -171,9 +171,6 @@ func (rws *WriteStorage) ApplyConfig(conf *config.Config) error {
+@@ -175,9 +175,6 @@ func (rws *WriteStorage) ApplyConfig(conf *config.Config) error {
  			WriteProtoMsg:    rwConf.ProtobufMessage,
  			Timeout:          rwConf.RemoteTimeout,
  			HTTPClientConfig: rwConf.HTTPClientConfig,
