@@ -92,7 +92,7 @@ index 81565b5cf..9cd49a066 100644
  
  	s := &alertmanagerSet{
 diff --git a/storage/remote/client.go b/storage/remote/client.go
-index 8deb80667..a7299e063 100644
+index 8deb80667..dccb95773 100644
 --- a/storage/remote/client.go
 +++ b/storage/remote/client.go
 @@ -33,7 +33,6 @@ import (
@@ -112,7 +112,7 @@ index 8deb80667..a7299e063 100644
  )
  
  const (
-@@ -129,7 +126,6 @@ type ClientConfig struct {
+@@ -129,9 +126,6 @@ type ClientConfig struct {
  	URL                   *config_util.URL
  	Timeout               model.Duration
  	HTTPClientConfig      config_util.HTTPClientConfig
@@ -122,7 +122,7 @@ index 8deb80667..a7299e063 100644
  	Headers               map[string]string
  	RetryOnRateLimit      bool
  	WriteProtoMsg         remoteapi.WriteMessageType
-@@ -195,27 +191,6 @@ func NewWriteClient(name string, conf *ClientConfig) (WriteClient, error) {
+@@ -195,27 +189,6 @@ func NewWriteClient(name string, conf *ClientConfig) (WriteClient, error) {
  		t = newInjectHeadersRoundTripper(conf.Headers, t)
  	}
  
